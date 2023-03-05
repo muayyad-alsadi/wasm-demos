@@ -9,6 +9,6 @@ An image filter is a good benchmark because it tests the following
 
 ## Calling WASM from the browser
 
-[Online Histogram Matching: transfer colors from one image to another](https://github.com/muayyad-alsadi/wasm-demos)
+[Online Histogram Matching: transfer colors from one image to another](https://muayyad-alsadi.github.io/wasm-demos/histogram-matching/index.html)
 ## Calling WASM from Python
 
