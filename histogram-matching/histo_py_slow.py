@@ -4,10 +4,8 @@ pure python implementation of histogram matching
 """
 
 import math
-import time
-import numpy as np
-import array
 import itertools
+import time
 from collections import defaultdict
 from PIL import Image
 
@@ -55,6 +53,27 @@ def get_histo_match_map_one(cdf_ref, cdf_in):
         mapping[i]=k
     return mapping
 
+def a_T(a_out):
+    a_out = bytearray(itertools.chain(*zip(*a_out)))
+    return a_out
+
+def a_T_alt(a_out):
+    a_out2 = bytearray([0]*(len(a_out[0])*3))
+    j=0
+    for i in range(0, len(a_out2), 3):
+        a_out2[i]=a_out[0][j]
+        a_out2[i+1]=a_out[1][j]
+        a_out2[i+2]=a_out[2][j]
+        j+=1 
+    return a_out2
+
+def a_T_alt2(a_out):
+    n = len(a_out[0])
+    N = n*3
+    a_out2 = bytearray((a_out[i%3][i//3] for i in range(N)))
+    return a_out2
+
+
 def histo_img(img_ref, img_in):
     a_ref = norm_a(img_ref.getdata())
     a_in = norm_a(img_in.getdata())
@@ -75,24 +94,33 @@ def histo_img(img_ref, img_in):
     dt=int((time.time()-t0)*1000.0)
     print(f"mapping took {dt} ms")
     t0=time.time()
-    a_out = np.array((
-        bytearray(mapping[0][i] for i in a_in[0]),
-        bytearray(mapping[1][i] for i in a_in[1]),
-        bytearray(mapping[2][i] for i in a_in[2]),
-    ), np.uint8).T
+    mapping0=mapping[0]
+    mapping1=mapping[1]
+    mapping2=mapping[2]
+    a_out = (
+        bytearray((mapping0[i] for i in a_in[0])),
+        bytearray((mapping1[i] for i in a_in[1])),
+        bytearray((mapping2[i] for i in a_in[2])),
+    )
     dt=int((time.time()-t0)*1000.0)
     print(f"np.take took {dt} ms")
+    t0=time.time()
+    a_out = a_T(a_out)
+    #a_out = a_T_alt(a_out)
+    #a_out = a_T_alt2(a_out)
+    dt=int((time.time()-t0)*1000.0)
+    print(f"a.T took {dt} ms")
     return a_out
 
 def histo(img_ref, img_in):
-    h,w=img_in.size
     t0=time.time()
     a_out = histo_img(img_ref, img_in)
-    a_out = np.array(a_out, dtype=np.uint8).reshape((w,h,3))
     dt=int((time.time()-t0)*1000.0)
     print(f"histo_img took {dt} ms")
     t0=time.time()
-    img=Image.fromarray(a_out, 'RGB')
+    h, w = img_in.size
+    # a_out = [list(zip(a_out[0][i:i+w], a_out[1][i:i+w], a_out[2][i:i+w])) for i in range(0, len(a_out), w)]
+    img = Image.frombuffer('RGB', img_in.size, bytes(a_out))
     dt=int((time.time()-t0)*1000.0)
     print(f"array to img {dt} ms")
     return img
