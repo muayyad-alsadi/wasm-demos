@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Online in-browser Image Histogram Matching</title>
+</head>
+<body>
+<form onsubmit="return false;">
+<input type="file" name="src_img" accept="image/*" onchange="ui.on_src_img(event)">
+    <img id="src01" width="100" src="/img/img01.jpg" onclick="ui.pick_src(this)">
+    <img id="src02" width="100" src="/img/img02.jpg" onclick="ui.pick_src(this)">
+    <img id="src03" width="100" src="/img/img03.jpg" onclick="ui.pick_src(this)">
+    <img id="src04" width="100" src="/img/img04.jpg" onclick="ui.pick_src(this)">
+    <img id="src05" width="100" src="/img/img05.jpg" onclick="ui.pick_src(this)">
+    <img id="src06" width="100" src="/img/img06.jpg" onclick="ui.pick_src(this)">
+    <img id="src07" width="100" src="/img/img07.jpg" onclick="ui.pick_src(this)">
+    <img id="src08" width="100" src="/img/img08.jpg" onclick="ui.pick_src(this)">
+    <img id="src09" width="100" src="/img/img09.jpg" onclick="ui.pick_src(this)">
+    <img id="src10" width="100" src="/img/img10.jpg" onclick="ui.pick_src(this)">
+    <br/>
+    <hr/>
+    <br/>
+<input type="file" name="ref_img" accept="image/*" onchange="ui.on_ref_img(event)">
+    <img id="ref01" width="100" src="/img/img01.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref02" width="100" src="/img/img02.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref03" width="100" src="/img/img03.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref04" width="100" src="/img/img04.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref05" width="100" src="/img/img05.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref06" width="100" src="/img/img06.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref07" width="100" src="/img/img07.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref08" width="100" src="/img/img08.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref09" width="100" src="/img/img09.jpg" onclick="ui.pick_ref(this)">
+    <img id="ref10" width="100" src="/img/img10.jpg" onclick="ui.pick_ref(this)">
+    <br/>
+    <hr/>
+    <br/>
+
+</form>
+<br>
+<h3>Input Image:</h3>
+<img id="src_preview" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=" onload="ui.src_loaded()">
+<h3>Reference Image:</h3>
+<img id="ref_preview" src="/img/img01.jpg" onload="ui.ref_loaded()">
+<h3>Output:</h3>
+<canvas
+      id="canvas"
+      width="200"
+      height="200"
+      style="image-rendering: pixelated; image-rendering: crisp-edges;"
+    ></canvas>
+
+</body>
+<script type="text/javascript">
+//<![CDATA[
+// const js_memory = new WebAssembly.Memory({ initial: (500*1024)/size64kb + 1 });
+window.ui = window.ui || {};
+let is_src_loaded=false;
+let is_ref_loaded=false;
+let src_data = null;
+let ref_data = null;
+ui.pick_src=function(el) {
+    var output = document.getElementById('src_preview');
+    output.src = el.src;
+}
+ui.pick_ref=function(el) {
+    var output = document.getElementById('ref_preview');
+    output.src = el.src;
+}
+ui.src_loaded=function() {
+    is_src_loaded=true;
+    img = document.getElementById('src_preview');
+    src_data = getImageData(img);
+    const canvas = document.getElementById('canvas');
+    console.log(img.width, img.height);
+    canvas.width = img.width;
+    canvas.height = img.height;
+    if (src_data && ref_data) {
+        setTimeout(function(){ui.histo_match();}, 100);
+    }
+}
+ui.ref_loaded=function() {
+    is_ref_loaded=true;
+    img = document.getElementById('ref_preview');
+    ref_data = getImageData(img);
+    if (src_data && ref_data) {
+        setTimeout(function(){ui.histo_match();}, 100);
+    }
+}
+ui.on_src_img=function(event) {
+    is_src_loaded=false;
+    var output = document.getElementById('src_preview');
+    output.src = URL.createObjectURL(event.target.files[0]);
+}
+ui.on_ref_img=function(event) {
+    is_ref_loaded=false;
+    var output = document.getElementById('ref_preview');
+    output.src = URL.createObjectURL(event.target.files[0]);
+}
+/*
+    var img = new Image();
+    img.onload = function() {
+        const canvas = document.getElementById('canvas');
+        console.log(img.width, img.height);
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = document.getElementById('canvas').getContext('2d');
+        ui.canvas = canvas;
+        ui.ctx = ctx;
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+        console.log(canvas.width, canvas.height);
+        ui.data = ctx.getImageData(0,0, canvas.width, canvas.height)
+        ui.initRollX(ui.data.data, canvas.width, canvas.height);
+    }
+    // console.log(event.target.files.length)
+    img.src = URL.createObjectURL(event.target.files[0]);
+};
+*/
+const size64kb = 64*1024;
+function logi(i) {console.log("logi", i);}
+function logf(f) {console.log("logf", f);}
+const imports={logi, logf};
+
+function getImageData(img) {
+    var canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    // Copy the image contents to the canvas
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    return ctx.getImageData(0,0, img.width, img.height).data;
+}
+
+WebAssembly.instantiateStreaming(fetch('histo_match.wasm'), {imports})
+.then(function(results) {
+  var instance = results.instance;
+  console.log(instance)
+  var memory = instance.exports.memory;
+  ui.histo_match = function() {
+    var hb = instance.exports.__heap_base.value;
+    let size_ref = ref_data.length;
+    let size_src = src_data.length;
+    let size_total = size_ref + size_src + size_src;
+    console.log(size_total)
+    let growth = Math.ceil((hb+size_total+20*size64kb - memory.buffer.byteLength) / size64kb)
+    if (growth>0) {
+        console.log("grow", growth)
+        memory.grow(growth);
+    }
+    // const js_memory = new WebAssembly.Memory({ initial: (size_total)/size64kb + 16 }).buffer;
+    const ref_buf = new Uint8ClampedArray(memory.buffer, hb, size_ref);
+    const src_buf = new Uint8ClampedArray(memory.buffer, hb+size_ref, size_src);
+    const dst_buf = new Uint8ClampedArray(memory.buffer, hb+size_ref+size_src, size_src);
+    ref_buf.set(ref_data);
+    src_buf.set(src_data);
+    let t0= Date.now();
+    instance.exports.histo_match(size_ref, ref_buf.byteOffset, size_src, src_buf.byteOffset, dst_buf.byteOffset);
+    console.log("took ", Date.now()-t0, " ms");
+    //console.log("dst:", size_src, mem_dst);
+    // update
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const img_data = ctx.getImageData(0,0, canvas.width, canvas.height);
+    img_data.data.set(dst_buf);
+    ctx.putImageData(img_data, 0, 0);
+/*
+    console.log("dst:", 2, mem_dst);
+    console.log(memory.buffer)
+    */
+    /*
+    
+    */
+  }
+  /*
+  memory.grow((100*1024)/size64kb+1); // 100kb
+  // console.log(js_memory);
+  ui.tick=function() {
+      if (!ui.is_rollx_ready) return;
+      // ui.buf.set(ui.ctx.getImageData(0, 0, ui.w, ui.h).data);
+      // let t0=Date.now();
+      instance.exports.rollx(ui.buf, ui.w, ui.h, 8);
+      // console.log(Date.now()-t0);
+      // let img_data = ui.ctx.getImageData(0,0, ui.w, ui.h)
+      let img_data = ui.data;
+      img_data.data.set(ui.buf);
+      ui.ctx.putImageData(img_data, 0, 0);
+  }
+  ui.initRollX=function(canvasData, w, h) {
+      ui.w=w;
+      ui.h=h;
+      const newSize = 4*w*h;
+      if (memory.buffer.byteLength<newSize) {
+          memory.grow(newSize/size64kb+1);
+          console.log("new size: ", memory.buffer.byteLength);
+      }
+      const buf = new Uint8Array(memory.buffer, 0, 4*w*h);
+      buf.set(canvasData);
+      ui.buf=buf;
+      ui.is_rollx_ready=true;
+  };
+  */
+});
+
+/*
+functio U8A2String(buf, offset, length, enc) {
+  enc = enc || "utf8";
+  const bytes = new Uint8Array(buf, offset, length);
+  return new TextDecoder(enc).decode(bytes);
+}
+*/
+//]]>
+</script>
+</html>
