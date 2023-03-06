@@ -1,5 +1,11 @@
-import ctypes
+"""
+This class is used to workaround a bottleneck in wasmtime
 
+* https://github.com/bytecodealliance/wasmtime-py/issues/81
+* https://github.com/bytecodealliance/wasmtime-py/pull/134
+"""
+
+import ctypes
 import array
 
 class FastMemory:
