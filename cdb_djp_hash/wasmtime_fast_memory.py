@@ -21,13 +21,14 @@ class FastMemory:
         """
         if self._store is None:
             raise RuntimeError("you must call `set_store()` before using highlevel access")
+
         data_ptr = self._memory.data_ptr(self._store)
         size = self._memory.data_len(self._store)
         if isinstance(key, int):
             if key>=size:
                 raise IndexError("out of memory size")
             return data_ptr[key]
-        # if not int, then it must be slice
+        # if not int, then it must be a slice
         if not isinstance(key, slice):
             raise TypeError("key can either be integer index or slice")
 
@@ -63,18 +64,19 @@ class FastMemory:
                 raise IndexError("out of memory size")
             data_ptr[key] = value
             return value
-        # if not int then it must be a slice
+        # if not int, then it must be a slice
         if not isinstance(key, slice):
             raise TypeError("key can either be integer index or slice")
+
+        start, stop, step = key.indices(size)
+        # this is tested with [1:4:2]
+        if step!=1:
+            raise ValueError("slice with step is not supported")
 
         # if it's a slice then value must be bytearray ex. cast bytes() to bytearray
         if not isinstance(value, array.array) and not isinstance(value, bytearray):
             # value = array.array('B', value)
             value = bytearray(value)
-
-        start, stop, step = key.indices(size)
-        if step!=1:
-            raise ValueError("slice with step is not supported")
 
         val_size = len(value)
         # key.indices(size) knows about size but not val_size
