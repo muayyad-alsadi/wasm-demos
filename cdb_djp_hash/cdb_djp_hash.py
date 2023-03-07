@@ -23,7 +23,7 @@ from cProfile import Profile
 
 from wasmtime import Store, Module, Instance
 
-from wasmtime_fast_memory_alt import FastMemory
+from wasmtime_fast_memory import FastMemory
 
 store = Store()
 module = Module.from_file(store.engine, 'cdb_djp_hash.wasm')
