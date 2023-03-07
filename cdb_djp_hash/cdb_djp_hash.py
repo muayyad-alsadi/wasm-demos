@@ -49,7 +49,7 @@ def cdb_djp_hash_pure(s):
         h = (((h << 5) + h) ^ c) & 0xffffffff
     return h
 
-input_b = b"Hello, world!"
+input_b = b"Hello, world!"*3
 input_a = bytearray(input_b)
 #input_a = array.array('B', input_b)
 large_b = b"Hello, world! "*100
