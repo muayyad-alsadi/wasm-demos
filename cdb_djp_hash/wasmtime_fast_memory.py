@@ -28,7 +28,7 @@ class FastMemory:
         # if not int, then it must be slice
         if not isinstance(key, slice):
             raise TypeError("key can either be integer index or slice")
-        
+
         start, stop, step = key.indices(size)
         # this is tested with [1:4:2]
         if step!=1:
@@ -53,7 +53,7 @@ class FastMemory:
         """
         if self._store is None:
             raise RuntimeError("you must call `set_store()` before using highlevel access")
-        
+
         data_ptr = self._memory.data_ptr(self._store)
         size = self._memory.data_len(self._store)
         if isinstance(key, int):
@@ -64,10 +64,12 @@ class FastMemory:
         # if not int then it must be a slice
         if not isinstance(key, slice):
             raise TypeError("key can either be integer index or slice")
+
         # if it's a slice then value must be bytearray ex. cast bytes() to bytearray
         if not isinstance(value, array.array) and not isinstance(value, bytearray):
             # value = array.array('B', value)
             value = bytearray(value)
+
         start, stop, step = key.indices(size)
         if step!=1:
             raise ValueError("slice with step is not supported")
@@ -76,7 +78,7 @@ class FastMemory:
         # key.indices(size) knows about size but not val_size
         if stop-start>val_size:
             raise IndexError("out of memory size")
-        
+
         ptr_type = ctypes.c_ubyte * val_size
         src_ptr = (ptr_type).from_buffer(value)
         dst_ptr = ctypes.addressof((ptr_type).from_address(ctypes.addressof(data_ptr.contents)+start))
