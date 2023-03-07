@@ -38,13 +38,11 @@ class FastMemory:
             raise ValueError("slice with step is not supported")
 
         val_size = stop - start
-        value = bytearray(val_size)
-
+        if val_size<=0:
+            return bytearray(0)
         ptr_type = ctypes.c_ubyte * val_size
-        dst_ptr = (ptr_type).from_buffer(value)
-        src_ptr = ctypes.addressof((ptr_type).from_address(ctypes.addressof(data_ptr.contents)+start))
-        ctypes.memmove(dst_ptr, src_ptr, val_size)
-        return value
+        src_ptr = (ptr_type).from_address(ctypes.addressof(data_ptr.contents)+start)
+        return bytearray(src_ptr)
 
     def __setitem__(self, key: Union[int, slice], value: Union[bytearray, array.array]):
         """
