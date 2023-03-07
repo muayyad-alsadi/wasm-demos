@@ -8,12 +8,14 @@ This class is used to workaround a bottleneck in wasmtime
 import ctypes
 import array
 
+from typing import Union
+
 class FastMemory:
     def __init__(self, memory, store):
         self._memory = memory
         self._store = store
 
-    def __getitem__(self, key: int):
+    def __getitem__(self, key: Union[int, slice]):
         """
         provide memory[offset] or memory[start:stop]
         """
@@ -43,7 +45,7 @@ class FastMemory:
         ctypes.memmove(dst_ptr, src_ptr, val_size)
         return value
 
-    def __setitem__(self, key, value: bytearray):
+    def __setitem__(self, key: Union[int, slice], value: Union[bytearray, array.array]):
         """
         provide setter for memory[key] with slice support
 
@@ -76,10 +78,10 @@ class FastMemory:
 
         val_size = len(value)
         # key.indices(size) knows about size but not val_size
-        if stop-start>val_size:
-            raise IndexError("out of memory size")
+        stop = start+min(stop-start, val_size)
 
-        ptr_type = ctypes.c_ubyte * val_size
+        # NOTE: we can use * 1, because we need pointer to the start only
+        ptr_type = ctypes.c_ubyte * val_size 
         src_ptr = (ptr_type).from_buffer(value)
         dst_ptr = ctypes.addressof((ptr_type).from_address(ctypes.addressof(data_ptr.contents)+start))
         ctypes.memmove(dst_ptr, src_ptr, val_size)

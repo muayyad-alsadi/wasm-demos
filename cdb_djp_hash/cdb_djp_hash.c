@@ -16,7 +16,7 @@ uint32 cdb_djp_hashadd(uint32 h,unsigned char c)
   return h ^ c;
 }
 
-uint32 cdb_djp_hash(char *buf,unsigned int len)
+uint32 cdb_djp_hash(unsigned char *buf,unsigned int len)
 {
   uint32 h;
 

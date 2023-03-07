@@ -9,6 +9,7 @@ call WASM function from inside python using wasmtime
 import timeit
 import array
 import functools
+import ctypes
 
 # you can import wasm files directly if loaded
 # import wasmtime.loader
@@ -28,6 +29,7 @@ store = Store()
 module = Module.from_file(store.engine, 'cdb_djp_hash.wasm')
 instance = Instance(store, module, [])
 memory = instance.exports(store)['memory']
+memory.grow(store, 10)
 fast_mem = FastMemory(memory, store)
 
 __heap_base = instance.exports(store)['__heap_base']
@@ -40,7 +42,8 @@ def cdb_djp_hash_wasm(input: bytearray):
     start = hb
     stop = start + size
     fast_mem[start:stop]=input
-    return _cdb_djp_hash_wasm(start, size)
+    return ctypes.c_uint32(_cdb_djp_hash_wasm(start, size)).value
+
 
 def cdb_djp_hash_pure(s):
     '''Return the value of DJB's hash function for byte string *s*'''
@@ -70,6 +73,10 @@ def main():
     else:
         print("cdb_djp_hash_c is not available install: `pip install --user pure-cdb`")
     print("*** hashing large data of size", len(large_b))
+    hash_wasm  = cdb_djp_hash_wasm(large_a)
+    hash_pure = cdb_djp_hash_pure(large_a)
+    hash_c = cdb_djp_hash_c(large_b)
+    print("validating same value", hex(hash_wasm), hex(hash_pure), hex(hash_c))
     #print(timeit.timeit(lambda: cdb_djp_hash_wasm(large_a), globals=globals(), number=1000))
     print("cdb_djp_hash_wasm(large_a)", timeit.timeit('cdb_djp_hash_wasm(large_a)', 'from __main__ import cdb_djp_hash_wasm, large_a', number=1000))
     print("cdb_djp_hash_wasm(large_a2)", timeit.timeit('cdb_djp_hash_wasm(large_a2)', 'from __main__ import cdb_djp_hash_wasm, large_a2', number=1000))

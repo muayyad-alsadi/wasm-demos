@@ -22,40 +22,18 @@ import ctypes
 
 from wasmtime import Store, Module, Instance
 
+from wasmtime_fast_memory import FastMemory
+
 store = Store()
 module = Module.from_file(store.engine, 'histo_match.wasm')
 instance = Instance(store, module, [])
 memory = instance.exports(store)['memory']
+fast_mem = FastMemory(memory, store)
 memory_ptr = memory.data_ptr(store)
 __heap_base = instance.exports(store)['__heap_base']
 hb=__heap_base.value(store)
 histo_match = instance.exports(store)['histo_match']
 size64k=64*1024
-
-def set_slice(val, start=0, end=None):
-    size = memory.data_len(store)
-    if end is None: end=start+len(val)
-    val_size = len(val)
-    if end-start>val_size or end>size:
-        raise IndexError("out of memory size")
-    src_ptr = (ctypes.c_ubyte * val_size).from_buffer(val)
-    dst_ptr = ctypes.addressof((ctypes.c_ubyte*val_size).from_address(ctypes.addressof(memory_ptr.contents)+start))
-    ctypes.memmove(dst_ptr, src_ptr, val_size)
-    return
-
-
-def get_slice(start=0, end=None):
-    size = memory.data_len(store)
-    if end is None: end=size
-    if end>size:
-        raise IndexError("out of memory size")
-    val_size=end-start
-    val=bytearray(val_size)
-    dst_ptr = (ctypes.c_ubyte * val_size).from_buffer(val)
-    src_ptr = ctypes.addressof((ctypes.c_ubyte*val_size).from_address(ctypes.addressof(memory_ptr.contents)+start))
-    ctypes.memmove(dst_ptr, src_ptr, val_size)
-    return val
-
 
 # libname = '_libwasmtime.so'
 # dll = cdll.LoadLibrary(filename)
@@ -86,8 +64,9 @@ def histo(img_ref, img_in):
         print(memory.grow(store, growth))
         print(memory.data_len(store))
     t0=time.time()
-    set_slice(a_ref)
-    set_slice(a_in, len(a_ref))
+    fast_mem[0:] = a_ref
+    fast_mem[len(a_ref):] = a_in
+
     dt=int((time.time()-t0)*1000.0)
     print(f"slice set took {dt} ms")
     t0=time.time()
@@ -96,7 +75,7 @@ def histo(img_ref, img_in):
     print(f"wasm took {dt} ms")
     t0=time.time()
     # dst=bytearray(memory.data_ptr(store)[len(a_ref)+len(a_in):len(a_ref)+len(a_in)+len(a_in)])
-    dst = get_slice(len(a_ref)+len(a_in), len(a_ref)+len(a_in)+len(a_in))
+    dst = fast_mem[len(a_ref)+len(a_in): len(a_ref)+len(a_in)+len(a_in)]
     a_dst = np.array(dst, dtype=np.uint8).reshape((w,h,4))[:,:,:3]
     dt=int((time.time()-t0)*1000.0)
     print(f"slice to array {dt} ms")
